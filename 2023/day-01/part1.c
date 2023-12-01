@@ -3,7 +3,7 @@
 #define MAX 60
 
 int main() {
-  FILE *input = fopen("input1.txt", "r");
+  FILE *input = fopen("input.txt", "r");
   char line[MAX];
   int digit1;
   int digit2;
