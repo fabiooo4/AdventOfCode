@@ -36,16 +36,6 @@ void replaceStr(char *target, const char *needle, const char *replacement) {
   strcpy(target, buffer);
 }
 
-int compare(const void *x, const void *y) {
-  char a = *((char *)x);
-  char b = *((char *)y);
-
-  if (a < b)
-    return -1;
-  else
-    return 1;
-}
-
 void replaceWordNumbers(char *string) {
   char *wordNumbers[9] = {"one", "two",   "three", "four", "five",
                           "six", "seven", "eight", "nine"};
