@@ -7,7 +7,7 @@
 #define MAX_GREEN_VALUE 13
 #define MAX_BLUE_VALUE 14
 
-typedef struct game {
+typedef struct {
   int id;
   int maxRed;
   int maxGreen;
