@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define LINE_LENGTH 140
-#define FILE_LENGTH 140
+#define LINE_LENGTH 14
+#define FILE_LENGTH 12
 
 int isDigit(char c) {
   if (c >= '0' && c <= '9') {
@@ -14,7 +14,7 @@ int isDigit(char c) {
 int main() {
   FILE *input = fopen("test.txt", "r"); // in test.txt part1: 413 part2: 6756
   char line[FILE_LENGTH][LINE_LENGTH];
-  int finalAnswer;
+  int finalAnswer = 0;
 
   // File check
   if (input == NULL) {
@@ -27,7 +27,7 @@ int main() {
     lineIdx++;
   }
 
-  for (int i = 0; i < 12; i++) {
+  for (int i = 0; i < FILE_LENGTH; i++) {
     int horizontalSum = 0;
     int topSum = 0;
     int bottomSum = 0;
@@ -39,7 +39,7 @@ int main() {
     int bottom = 0;
     int bottomLeft = 0;
     int bottomRight = 0;
-    for (int j = 0; j < 12; j++) {
+    for (int j = 0; j < LINE_LENGTH; j++) {
       // If current character is a symbol print it
       if (!isDigit(line[i][j]) && line[i][j] != '.' && line[i][j] != '\n') {
 
@@ -81,14 +81,14 @@ int main() {
 
         // Bottom
         offset = 0;
-        while (i != 11 && isDigit(line[i + 1][j - offset])) {
+        while (i != LINE_LENGTH - 1 && isDigit(line[i + 1][j - offset])) {
           bottom = atoi(&line[i + 1][j - offset]);
           offset++;
         }
 
         // Bottom left
         offset = 0;
-        while (i != 11 && !isDigit(line[i + 1][j]) &&
+        while (i != LINE_LENGTH - 1 && !isDigit(line[i + 1][j]) &&
                isDigit(line[i + 1][j - offset - 1])) {
           bottomLeft = atoi(&line[i + 1][j - offset - 1]);
           offset++;
@@ -96,7 +96,7 @@ int main() {
 
         // Bottom Right
         offset = 0;
-        if (i != 11 && !isDigit(line[i + 1][j]) &&
+        if (i != LINE_LENGTH - 1 && !isDigit(line[i + 1][j]) &&
             isDigit(line[i + 1][j + offset + 1])) {
           bottomRight = atoi(&line[i + 1][j + offset + 1]);
           offset++;
