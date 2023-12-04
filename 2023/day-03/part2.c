@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define LINE_LENGTH 15
-#define FILE_LENGTH 12
+#define LINE_LENGTH 142
+#define FILE_LENGTH 140
 
 int isDigit(char c) {
   if (c >= '0' && c <= '9') {
@@ -12,7 +12,7 @@ int isDigit(char c) {
 }
 
 int main() {
-  FILE *input = fopen("test.txt", "r"); // in test.txt part1: 413 part2: 6756
+  FILE *input = fopen("input.txt", "r");
   char line[FILE_LENGTH][LINE_LENGTH];
   int finalAnswer = 0;
 
@@ -28,12 +28,12 @@ int main() {
   }
 
   for (int i = 0; i < FILE_LENGTH; i++) {
-    int partsMult = 1;
+    int partsMult;
 
     int parts;
     for (int j = 0; line[i][j] != '\n'; j++) {
-      // If current character is a symbol print it
       if (line[i][j] == '*') {
+        partsMult = 1;
         parts = 0;
 
         // Count parts
@@ -69,6 +69,7 @@ int main() {
           partsMult *= tmp;
         }
 
+        // Top left
         if (!isDigit(line[i - 1][j]) && isDigit(line[i - 1][j - 1])) {
           int tmp = 0;
           int offset = 1;
@@ -80,6 +81,8 @@ int main() {
           }
           partsMult *= tmp;
         }
+
+        // Top right
         if (!isDigit(line[i - 1][j]) && isDigit(line[i - 1][j + 1])) {
           parts++;
           partsMult *= atoi(&line[i - 1][j + 1]);
@@ -95,9 +98,10 @@ int main() {
             tmp = atoi(&line[i + 1][j - offset]);
             offset++;
           }
-          printf("%d\n", tmp);
           partsMult *= tmp;
         }
+
+        // Bottom left
         if (!isDigit(line[i + 1][j]) && isDigit(line[i + 1][j - 1])) {
           int tmp = 0;
           int offset = 1;
@@ -107,9 +111,10 @@ int main() {
             tmp = atoi(&line[i + 1][j - offset]);
             offset++;
           }
-          printf("%d\n", tmp);
           partsMult *= tmp;
         }
+
+        // Bottom right
         if (!isDigit(line[i + 1][j]) && isDigit(line[i + 1][j + 1])) {
           parts++;
           partsMult *= atoi(&line[i + 1][j + 1]);
@@ -119,7 +124,7 @@ int main() {
           finalAnswer += partsMult;
           printf("%d %d\n", parts, partsMult);
         } else {
-          partsMult = 0;
+          partsMult = 1;
         }
       }
     }
