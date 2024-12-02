@@ -33,7 +33,7 @@ fn main() {
 
         let time = Instant::now();
 
-        let input = read_to_string(format!("/input/day{:02}.txt", day))
+        let input = read_to_string(format!("./input/day{:02}.txt", day))
             .unwrap_or_else(|e| panic!("The input file is missing or cannot be read: {}", e));
         let (p1, p2) = func(&input);
 
