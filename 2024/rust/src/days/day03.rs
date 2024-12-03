@@ -4,13 +4,30 @@ use regex::Regex;
 ///////////////////////////////////////////////////////////////////////////////
 
 pub fn solve(input: &str) -> SolutionPair {
-    let mul_regex = Regex::new(r"mul\(([0-9]+),([0-9]+)\)").unwrap();
+    //////////
+    // Part 1
+    //////////
 
+    let mul_regex = Regex::new(r"mul\(([0-9]+),([0-9]+)\)").unwrap();
     let mut sol1: u64 = 0;
-    let mut sol2: u64 = 0;
 
     for (_, [fac1, fac2]) in mul_regex.captures_iter(input).map(|c| c.extract()) {
         sol1 += fac1.parse().unwrap_or(1) * fac2.parse().unwrap_or(1);
+    }
+
+    //////////
+    // Part 2
+    //////////
+
+    let mut sol2: u64 = 0;
+
+    let do_dont_regex = Regex::new(r"(do\(\))([\s\S]*?)(don't\(\))").unwrap();
+    let do_input = format!("do(){}don't()", input);
+
+    for (_, [_, to_do, _]) in do_dont_regex.captures_iter(&do_input).map(|c| c.extract()) {
+        for (_, [fac1, fac2]) in mul_regex.captures_iter(to_do).map(|c| c.extract()) {
+            sol2 += fac1.parse().unwrap_or(1) * fac2.parse().unwrap_or(1);
+        }
     }
 
     (Solution::from(sol1), Solution::from(sol2))
@@ -57,7 +74,7 @@ mod test {
         let (p1, _) = solve(input);
         assert_eq!(p1, Solution::from(161_u64));
 
-        let input = "mul(2,4)don't()_mul(5,5)mul(11,8)undo()?mul(8,5)";
+        let input = "xmul(2,4)&mul[3,7]!^don't()_mul(5,5)+mul(32,64](mul(11,8)undo()?mul(8,5))";
         let (_, p2) = solve(input);
         assert_eq!(p2, Solution::from(48_u64));
     }
