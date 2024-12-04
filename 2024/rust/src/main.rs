@@ -35,6 +35,11 @@ fn main() {
 
         let input = read_to_string(format!("./input/day{:02}.txt", day))
             .unwrap_or_else(|e| panic!("The input file is missing or cannot be read: {}", e));
+
+        if input.is_empty() {
+            panic!("The input file is empty");
+        }
+
         let (p1, p2) = func(&input);
 
         let elapsed_ms = time.elapsed().as_nanos() as f64 / 1_000_000.0;
