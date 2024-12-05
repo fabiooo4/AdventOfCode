@@ -20,7 +20,6 @@ pub fn solve(input: &str) -> SolutionPair {
         }
     }
 
-
     (Solution::from(sol1), Solution::from(sol2))
 }
 
@@ -42,12 +41,16 @@ fn is_ordered(update: &[u64], rules: &HashMap<u64, Vec<u64>>) -> bool {
 fn fix_unordered(update: &mut [u64], rules: &HashMap<u64, Vec<u64>>) {
     while !is_ordered(update, rules) {
         let cur_update = Vec::from(&mut *update);
-        for (page_idx, page) in cur_update.iter().enumerate() {
-            for (check_idx, check) in cur_update.iter().enumerate() {
-                if let Some(after) = rules.get(page) {
-                    if after.contains(check) && check_idx < page_idx {
-                        update.swap(check_idx, page_idx);
-                    } 
+        for (left_idx, pair) in cur_update.windows(2).enumerate() {
+            if let Some(right) = pair.last() {
+                if let Some(after) = rules.get(pair.first().unwrap()) {
+                    if !after.contains(right) {
+                        let right_idx = match left_idx + 1 > update.len() {
+                            true => update.len(),
+                            false => left_idx + 1,
+                        };
+                        update.swap(left_idx, right_idx);
+                    }
                 }
             }
         }
