@@ -11,7 +11,7 @@ pub fn solve(input: &str) -> SolutionPair {
         for (col, char) in line.iter().enumerate() {
             if char == &'X' {
                 sol1 += count_xmas((col, row), &word_search);
-            } else if col > 0 && row > 0 && col < line.len()-1 && row < word_search.len()-1 && char == &'A' {
+            } else if char == &'A' {
                 sol2 += count_x_mas((col, row), &word_search);
             }
         }
