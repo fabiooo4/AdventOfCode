@@ -5,3 +5,6 @@ edition = "2021"
 
 [dependencies]
 regex = "1.11.1"
+
+[features]
+visualize = []
