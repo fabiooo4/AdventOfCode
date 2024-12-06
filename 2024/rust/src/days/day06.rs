@@ -1,4 +1,4 @@
-use std::{str::FromStr, thread::sleep, time::Duration};
+use std::{fmt::Display, thread::sleep, time::Duration};
 
 use crate::{Solution, SolutionPair};
 
@@ -29,11 +29,16 @@ pub fn solve(input: &str) -> SolutionPair {
     }
 
     let mut sol1: u64 = 0;
-    while let Some(visits) = guard.forward(&mut input_matrix) {
-        sol1 += visits as u64;
+    loop {
+        sol1 += guard.toggle_cell(&mut input_matrix) as u64;
 
         #[cfg(all(not(test), feature = "visualize"))]
-        _print_map(&input_matrix, &(sol1 as usize));
+        _print_map(&input_matrix, &guard, &(sol1 as usize));
+        if get_next_cell(&guard, &mut input_matrix, 1).is_none() {
+            break;
+        }
+
+        guard.forward(&mut input_matrix);
     }
 
     if input_matrix.len() <= 1 {
@@ -42,7 +47,7 @@ pub fn solve(input: &str) -> SolutionPair {
 
     let sol2: u64 = 0;
 
-    for (y, line) in input_matrix.iter().enumerate() {
+    /* for (y, line) in input_matrix.iter().enumerate() {
         match line
             .iter()
             .position(|&c| c == '^' || c == '<' || c == 'v' || c == '>')
@@ -58,26 +63,28 @@ pub fn solve(input: &str) -> SolutionPair {
     }
 
     for (y, _) in input_matrix.iter().enumerate() {
-        // println!("{}", input_matrix[y][guard.position.0]);
+        println!("{}", input_matrix[y][guard.position.0]);
         if input_matrix[y][guard.position.0] == '#' {
-            // println!("wall_y:{y}");
+            println!("wall_y:{y}");
             if let Some(line) = input_matrix.get(y + 1) {
                 if let Some(x) = line.iter().position(|&c| c == '#') {
-                    // println!("wall_x:{x}");
+                    println!("wall_x:{x}");
                 }
             }
         }
-    }
+    } */
 
     (Solution::from(sol1), Solution::from(sol2))
 }
 
-fn _print_map(input_matrix: &Vec<Vec<char>>, visits: &usize) {
+fn _print_map(input_matrix: &[Vec<char>], guard: &Guard, visits: &usize) {
     print!("{}[2J", 27 as char);
-    for line in input_matrix {
-        for char in line {
+    for (y, line) in input_matrix.iter().enumerate() {
+        for (x, char) in line.iter().enumerate() {
             if *char == '.' {
                 print!(" ");
+            } else if guard.position == (x, y) {
+                print!("{}", guard.direction);
             } else {
                 print!("{char}");
             }
@@ -85,7 +92,7 @@ fn _print_map(input_matrix: &Vec<Vec<char>>, visits: &usize) {
         println!();
     }
     println!("Visits: {}", visits);
-    sleep(Duration::from_millis(300));
+    sleep(Duration::from_millis(100));
 }
 
 #[derive(Default)]
@@ -113,16 +120,19 @@ impl TryFrom<char> for Direction {
     }
 }
 
-impl Direction {
-    fn to_char(&self) -> char {
-        match self {
+impl Display for Direction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let c = match self {
             Direction::Up => '^',
             Direction::Down => 'v',
             Direction::Left => '<',
             Direction::Right => '>',
-        }
+        };
+        write!(f, "{}", c)
     }
+}
 
+impl Direction {
     fn turn_right(&mut self) {
         match self {
             Direction::Up => *self = Direction::Right,
@@ -142,48 +152,16 @@ struct Guard {
 impl Guard {
     /// Moves the guard forward in the direction it is facing and returns the unique visits and the
     /// next
-    fn forward(&mut self, grid: &mut [Vec<char>]) -> Option<usize> {
+    fn forward(&mut self, grid: &mut [Vec<char>]) {
         let speed = 1;
-        let mut visits = 0;
 
-        let mut next_cell = get_next_cell(self, grid, speed);
-
-        let mut intersection = false;
-        if next_cell != Some(&mut 'X')
-            && next_cell != Some(&mut '-')
-            && next_cell != Some(&mut '|')
-            && next_cell != Some(&mut '+')
-        {
-            visits += 1;
-        }
-
-        while next_cell == Some(&mut '#') {
-            self.direction.turn_right();
-            intersection = true;
-
-            next_cell = get_next_cell(self, grid, speed);
-            if next_cell == Some(&mut 'X')
-                || next_cell == Some(&mut '-')
-                || next_cell == Some(&mut '|')
-                || next_cell == Some(&mut '+')
-            {
-                visits -= 1;
+        // While the next cell is a wall, turn right
+        while let Some(cell) = get_next_cell(self, grid, speed) {
+            if *cell == '#' {
+                self.direction.turn_right();
+            } else {
+                break;
             }
-        }
-
-        let mut next_value = '-';
-        if let Some(next_cell) = next_cell {
-            next_value = *next_cell;
-            *next_cell = self.direction.to_char();
-        }
-
-        let current_cell: &mut char = grid.get_mut(self.position.1)?.get_mut(self.position.0)?;
-        match self.direction.to_char() {
-            '>' | '<' => {
-                *current_cell = '-';
-            }
-            '^' | 'v' => *current_cell = '|',
-            _ => *current_cell = 'X',
         }
 
         match self.direction {
@@ -204,27 +182,38 @@ impl Guard {
             }
             Direction::Right => self.position.0 += speed,
         }
+    }
 
-        if intersection || (next_value == '-' && next_value == '|') {
-            let previous_cell: &mut char = match self.direction {
-                Direction::Up => grid
-                    .get_mut(self.position.1 + speed)?
-                    .get_mut(self.position.0)?,
-                Direction::Down => grid
-                    .get_mut(self.position.1.checked_sub(speed)?)?
-                    .get_mut(self.position.0)?,
-                Direction::Left => grid
-                    .get_mut(self.position.1)?
-                    .get_mut(self.position.0 + speed)?,
-                Direction::Right => grid
-                    .get_mut(self.position.1)?
-                    .get_mut(self.position.0.checked_sub(speed)?)?,
-            };
+    fn toggle_cell(&self, grid: &mut [Vec<char>]) -> usize {
+        let mut visited = 0;
+        let wall_collision: bool = match get_next_cell(self, grid, 1) {
+            Some('#') => true,
+            Some(_) => false,
+            None => false,
+        };
 
-            *previous_cell = '+';
+        let cell = grid
+            .get_mut(self.position.1)
+            .and_then(|line| line.get_mut(self.position.0));
+
+        // If the cell is not already visited, mark it as visited
+        if let Some(cell) = cell {
+            if *cell != 'X' && *cell != '-' && *cell != '|' && *cell != '+' {
+                if wall_collision {
+                    *cell = '+';
+                } else {
+                    match self.direction {
+                        Direction::Up | Direction::Down => *cell = '|',
+                        Direction::Left | Direction::Right => *cell = '-',
+                    }
+                }
+                visited += 1;
+            } else {
+                *cell = '+';
+            }
         }
 
-        Some(visits)
+        visited
     }
 }
 
