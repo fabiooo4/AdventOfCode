@@ -1,4 +1,4 @@
-use std::{fmt::Display, thread::sleep, time::Duration};
+use std::{collections::HashMap, fmt::Display, thread::sleep, time::Duration};
 
 use crate::{Solution, SolutionPair};
 
@@ -28,12 +28,15 @@ pub fn solve(input: &str) -> SolutionPair {
         }
     }
 
+    let mut guard_p2 = guard.clone();
+
     let mut sol1: u64 = 0;
     loop {
         sol1 += guard.toggle_cell(&mut input_matrix) as u64;
 
         #[cfg(all(not(test), feature = "visualize"))]
         _print_map(&input_matrix, &guard, &(sol1 as usize));
+
         if get_next_cell(&guard, &mut input_matrix, 1).is_none() {
             break;
         }
@@ -45,46 +48,55 @@ pub fn solve(input: &str) -> SolutionPair {
         sol1 = 1;
     }
 
-    let sol2: u64 = 0;
+    let mut sol2: u64 = 0;
 
-    /* for (y, line) in input_matrix.iter().enumerate() {
-        match line
-            .iter()
-            .position(|&c| c == '^' || c == '<' || c == 'v' || c == '>')
-        {
-            Some(x) => {
-                guard.position.0 = x;
-                guard.position.1 = y;
-                guard.direction = Direction::try_from(input_matrix[y][x]).unwrap_or_default();
-                break;
-            }
-            None => continue,
-        }
-    }
-
-    for (y, _) in input_matrix.iter().enumerate() {
-        println!("{}", input_matrix[y][guard.position.0]);
-        if input_matrix[y][guard.position.0] == '#' {
-            println!("wall_y:{y}");
-            if let Some(line) = input_matrix.get(y + 1) {
-                if let Some(x) = line.iter().position(|&c| c == '#') {
-                    println!("wall_x:{x}");
+    for (y, line) in input_matrix.iter().enumerate() {
+        for (x, _) in line.iter().enumerate() {
+            let mut input_matrix = input_matrix.clone();
+            let cell: &mut char = input_matrix
+                .get_mut(y)
+                .and_then(|line| line.get_mut(x))
+                .unwrap();
+            if *cell == '-' || *cell == '|' || *cell == '+' {
+                *cell = '#';
+                if is_guard_looping(&mut guard_p2.clone(), &mut input_matrix) {
+                    sol2 += 1;
                 }
             }
         }
-    } */
+    }
 
     (Solution::from(sol1), Solution::from(sol2))
+}
+
+fn is_guard_looping(guard: &mut Guard, input_matrix: &mut [Vec<char>]) -> bool {
+    let mut visited_positions: HashMap<((usize, usize), Direction), u64> = HashMap::new();
+    loop {
+        let visits = visited_positions
+            .entry((guard.position, guard.direction))
+            .or_insert(0);
+        #[cfg(all(not(test), feature = "visualize"))]
+        _print_map(&input_matrix, &guard, &(*visits as usize));
+        *visits += 1;
+
+        if *visits > 1 {
+            return true;
+        } else if get_next_cell(guard, input_matrix, 1).is_none() {
+            return false;
+        }
+
+        guard.forward(input_matrix);
+    }
 }
 
 fn _print_map(input_matrix: &[Vec<char>], guard: &Guard, visits: &usize) {
     print!("{}[2J", 27 as char);
     for (y, line) in input_matrix.iter().enumerate() {
         for (x, char) in line.iter().enumerate() {
-            if *char == '.' {
-                print!(" ");
-            } else if guard.position == (x, y) {
+            if guard.position == (x, y) {
                 print!("{}", guard.direction);
+            } else if *char == '.' {
+                print!(" ");
             } else {
                 print!("{char}");
             }
@@ -95,7 +107,7 @@ fn _print_map(input_matrix: &[Vec<char>], guard: &Guard, visits: &usize) {
     sleep(Duration::from_millis(100));
 }
 
-#[derive(Default)]
+#[derive(Default, Clone, Copy, PartialEq, Eq, Hash)]
 enum Direction {
     #[default]
     Up,
@@ -143,7 +155,7 @@ impl Direction {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Clone, Copy)]
 struct Guard {
     position: (usize, usize),
     direction: Direction,
@@ -257,7 +269,7 @@ mod test {
             ......#...";
         let (p1, p2) = solve(input);
         assert_eq!(p1, Solution::from(41_u64));
-        assert_eq!(p2, Solution::from(0_u64));
+        assert_eq!(p2, Solution::from(6_u64));
     }
 
     #[test]
@@ -265,7 +277,6 @@ mod test {
         let input = "^";
         let (p1, p2) = solve(input);
         assert_eq!(p1, Solution::from(1_u64));
-        assert_eq!(p2, Solution::from(0_u64));
     }
 
     #[test]
@@ -277,7 +288,6 @@ mod test {
             ";
         let (p1, p2) = solve(input);
         assert_eq!(p1, Solution::from(2_u64));
-        assert_eq!(p2, Solution::from(0_u64));
     }
 
     #[test]
@@ -289,7 +299,6 @@ mod test {
             ";
         let (p1, p2) = solve(input);
         assert_eq!(p1, Solution::from(2_u64));
-        assert_eq!(p2, Solution::from(0_u64));
     }
 
     #[test]
@@ -303,7 +312,6 @@ mod test {
             ";
         let (p1, p2) = solve(input);
         assert_eq!(p1, Solution::from(4_u64));
-        assert_eq!(p2, Solution::from(0_u64));
     }
 
     #[test]
@@ -317,6 +325,5 @@ mod test {
             ";
         let (p1, p2) = solve(input);
         assert_eq!(p1, Solution::from(3_u64));
-        assert_eq!(p2, Solution::from(0_u64));
     }
 }
