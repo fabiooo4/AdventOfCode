@@ -28,7 +28,7 @@ pub fn solve(input: &str) -> SolutionPair {
         }
     }
 
-    let mut guard_p2 = guard.clone();
+    let guard_p2 = guard;
 
     let mut sol1: u64 = 0;
     loop {
@@ -275,7 +275,7 @@ mod test {
     #[test]
     fn one_cell() {
         let input = "^";
-        let (p1, p2) = solve(input);
+        let (p1, _) = solve(input);
         assert_eq!(p1, Solution::from(1_u64));
     }
 
@@ -286,7 +286,7 @@ mod test {
             .
             ^
             ";
-        let (p1, p2) = solve(input);
+        let (p1, _) = solve(input);
         assert_eq!(p1, Solution::from(2_u64));
     }
 
@@ -297,7 +297,7 @@ mod test {
             #<.
             ...
             ";
-        let (p1, p2) = solve(input);
+        let (p1, _) = solve(input);
         assert_eq!(p1, Solution::from(2_u64));
     }
 
@@ -310,7 +310,7 @@ mod test {
             ...#.
             .....
             ";
-        let (p1, p2) = solve(input);
+        let (p1, _) = solve(input);
         assert_eq!(p1, Solution::from(4_u64));
     }
 
@@ -323,7 +323,7 @@ mod test {
             .....
             ..#..
             ";
-        let (p1, p2) = solve(input);
+        let (p1, _) = solve(input);
         assert_eq!(p1, Solution::from(3_u64));
     }
 }
