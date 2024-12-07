@@ -1,3 +1,5 @@
+use std::convert;
+
 use crate::{Solution, SolutionPair};
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -20,50 +22,114 @@ pub fn solve(input: &str) -> SolutionPair {
         .collect();
 
     let mut sol1: u64 = 0;
+    let mut sol2: u64 = 0;
 
     for equation in &equations {
-        if is_equation_valid(equation) {
+        if is_equation_valid(equation, &[Operator::Add, Operator::Multiply]) {
             sol1 += equation.0;
         }
+
+        /* if is_equation_valid(
+            equation,
+            &[Operator::Add, Operator::Multiply, Operator::Concatenate],
+        ) {
+            sol2 += equation.0;
+        } */
     }
 
-    // Your solution here...
-    let sol2: u64 = 0;
+    // let mut n = 8;
+    // let b = convert_to_base(n, 3);
+    // println!("{}", b);
+    // for idx in 0..b.len() {
+    //     loop {
+    //         println!("{:?}", get_nth_operator(8, idx, 3));
+    //         if n != 0 {
+    //             n -= 1;
+    //         } else {
+    //             break;
+    //         }
+    //     }
+    // }
 
     (Solution::from(sol1), Solution::from(sol2))
 }
 
-fn is_equation_valid(equation: &(u64, Vec<u64>)) -> bool {
-    // Operators is a bitmask where 1 represents multiplication and 0 represents addition
-    let mut operators: usize = 2_u32.pow(equation.1.len() as u32 - 1) as usize - 1;
+#[derive(PartialEq, Default, Debug)]
+enum Operator {
+    #[default]
+    Add,
+    Multiply,
+    Concatenate,
+}
+
+impl Operator {
+    const COUNT: usize = 3;
+}
+
+fn is_equation_valid(equation: &(u64, Vec<u64>), operators: &[Operator]) -> bool {
+    // Operators is a mask where each digit represents a operator
+    let mut mask: usize = operators.len().pow(equation.1.len() as u32 - 1) - 1;
+    println!("\nOperators: {mask}");
     loop {
+        println!("m: {}: ", convert_to_base(mask, operators.len()));
         // If the nth bit of operators is 1 multiply, otherwise sum
         let result = &equation.1[1..].iter().enumerate().fold(
-            *equation
-                .1
-                .first()
-                .unwrap_or(&(get_nth_bit(operators, 0) as u64)) as u64,
-            |acc: u64, (idx, n)| match get_nth_bit(operators, idx) {
-                1 => acc * n,
-                0 => acc + n,
+            *equation.1.first().unwrap_or(&0),
+            |acc: u64, (idx, n)| match get_nth_operator(mask, idx, operators.len()) {
+                Operator::Add if operators.contains(&Operator::Add) => {
+                    println!("{:?}. {acc} + {n} = {}", get_nth_operator(mask, idx, operators.len()), acc + n);
+                    acc + n
+                },
+                Operator::Multiply if operators.contains(&Operator::Add) => {
+                    println!("{:?}. {acc} * {n} = {}", get_nth_operator(mask, idx, operators.len()), acc * n);
+                    acc * n
+                },
                 _ => acc,
             },
         );
 
+            print!("{} =? {}  ", equation.0, result);
         if equation.0 == *result {
+            print!("valid");
             return true;
         }
+        println!();
 
-        if operators != 0 {
-            operators -= 1;
+        if mask != 0 {
+            mask -= 1;
         } else {
             return false;
         }
     }
 }
 
-fn get_nth_bit(n: usize, idx: usize) -> usize {
-    n >> idx & 1
+fn get_nth_operator(n: usize, idx: usize, base: usize) -> Operator {
+    let n = convert_to_base(n, base);
+    match n.chars().nth(idx).unwrap_or_default().to_digit(base as u32) {
+        Some(d) => match d {
+            0 => Operator::Add,
+            1 => Operator::Multiply,
+            2 => Operator::Concatenate,
+            _ => Operator::default(),
+        },
+        None => Operator::default(),
+    }
+}
+
+fn convert_to_base(mut x: usize, base: usize) -> String {
+    let mut result = vec![];
+
+    loop {
+        let m = x % base;
+        x /= base;
+
+        // will panic if you use a bad radix (< 2 or > 36).
+        result.push(std::char::from_digit(m as u32, base as u32).unwrap());
+        if x == 0 {
+            break;
+        }
+    }
+    result.into_iter().rev().collect()
 }
 
 #[cfg(test)]
