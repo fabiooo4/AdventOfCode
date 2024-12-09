@@ -38,15 +38,12 @@ pub fn solve(input: &str) -> SolutionPair {
         })
         .collect();
 
-    // _print_files(&files);
-
-    // println!("{:?}", files);
-    order_files(&mut files);
-    // println!("{:?}", files);
-
-    // _print_files(&files);
+    // order_files_fragments(&mut files);
 
     let sol1: u64 = calculate_checksum(&files);
+
+    order_files(&mut files);
+
     let sol2: u64 = 0;
 
     (Solution::from(sol1), Solution::from(sol2))
@@ -59,7 +56,7 @@ fn _print_files(files: &Vec<File>) {
     println!();
 }
 
-fn order_files(files: &mut Vec<File>) {
+fn order_files_fragments(files: &mut Vec<File>) {
     loop {
         // println!("{:?}", files);
         #[cfg(all(not(test), any(feature = "visualize", feature = "debug")))]
@@ -125,6 +122,40 @@ fn order_files(files: &mut Vec<File>) {
 
             files.insert(free_idx, new_file);
         }
+    }
+}
+
+fn order_files(files: &mut Vec<File>) {
+    let current_order = files.clone();
+    for file in current_order.iter().rev() {
+        // println!("{:?}", files);
+        #[cfg(all(not(test), any(feature = "visualize", feature = "debug")))]
+        _print_files(files);
+        #[cfg(all(not(test), any(feature = "visualize", feature = "debug")))]
+        sleep(Duration::from_millis(3));
+
+        let last_file = match files.pop() {
+            Some(file) => file,
+            None => return,
+        };
+
+        let first_free: &mut u64 = match files.iter_mut().find(|f| f.free >= last_file.size) {
+            Some(file) => &mut file.free,
+            None => continue,
+        };
+
+        *first_free = 0;
+        files.last_mut().unwrap().free += last_file.free;
+
+        let free_idx = files.iter().position(|f| f.free >= last_file.size).unwrap();
+        files.insert(
+            free_idx,
+            File::new(
+                last_file.id,
+                last_file.size,
+                first_free.saturating_sub(last_file.size),
+            ),
+        );
     }
 }
 
