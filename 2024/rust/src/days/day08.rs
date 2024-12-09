@@ -19,12 +19,20 @@ pub fn solve(input: &str) -> SolutionPair {
     let map_height = input.trim().lines().count();
 
     let antinodes = calculate_antinodes(&antennas, (map_width, map_height), false);
+    let sol1: u64 = antinodes.len() as u64;
 
+    #[cfg(all(not(test), feature = "visualize"))]
+    println!("Part 1:");
     #[cfg(all(not(test), feature = "visualize"))]
     _print_map((map_width, map_height), &antennas, &antinodes);
 
-    let sol1: u64 = antinodes.len() as u64;
-    let sol2: u64 = 0;
+    let antinodes = calculate_antinodes(&antennas, (map_width, map_height), true);
+    let sol2: u64 = antinodes.len() as u64;
+
+    #[cfg(all(not(test), feature = "visualize"))]
+    println!("\nPart 2:");
+    #[cfg(all(not(test), feature = "visualize"))]
+    _print_map((map_width, map_height), &antennas, &antinodes);
 
     (Solution::from(sol1), Solution::from(sol2))
 }
@@ -38,27 +46,46 @@ fn calculate_antinodes(
     antennas.iter().for_each(|(_, positions)| {
         for antenna in positions {
             for other in positions {
+                if other == antenna {
+                    if resonance && !antinodes.contains(antenna) {
+                        antinodes.push(*antenna);
+                    }
+                    break;
+                }
+
                 let x_distance: i32 = antenna.0 as i32 - other.0 as i32;
                 let y_distance: i32 = antenna.1 as i32 - other.1 as i32;
 
                 let mut upper_antinodes: Vec<(usize, usize)> = vec![];
+                let mut current_cell = *antenna;
                 loop {
-                    upper_antinodes.push((
-                        (antenna.0 as i32 + x_distance) as usize,
-                        (antenna.1 as i32 + y_distance) as usize,
-                    ));
-                    if !resonance {
+                    let next_antinode = (
+                        (current_cell.0 as i32 + x_distance) as usize,
+                        (current_cell.1 as i32 + y_distance) as usize,
+                    );
+
+                    upper_antinodes.push(next_antinode);
+
+                    current_cell = next_antinode;
+
+                    if !resonance || current_cell.0 > map_width || current_cell.1 > map_height {
                         break;
                     }
                 }
 
                 let mut lower_antinodes: Vec<(usize, usize)> = vec![];
+                let mut current_cell = *other;
                 loop {
-                    lower_antinodes.push((
-                        (other.0 as i32 - x_distance) as usize,
-                        (other.1 as i32 - y_distance) as usize,
-                    ));
-                    if !resonance {
+                    let next_antinode = (
+                        (current_cell.0 as i32 - x_distance) as usize,
+                        (current_cell.1 as i32 - y_distance) as usize,
+                    );
+
+                    lower_antinodes.push(next_antinode);
+
+                    current_cell = next_antinode;
+
+                    if !resonance || current_cell.0 > map_width || current_cell.1 > map_height {
                         break;
                     }
                 }
@@ -91,6 +118,15 @@ fn _print_map(
         }
     }
 
+    for antinode in antinodes {
+        let cell: &mut char = map
+            .get_mut(antinode.1)
+            .unwrap()
+            .get_mut(antinode.0)
+            .unwrap();
+        *cell = '#';
+    }
+
     for antenna in antennas {
         for position in antenna.1 {
             let cell: &mut char = map
@@ -100,15 +136,6 @@ fn _print_map(
                 .unwrap();
             *cell = *antenna.0;
         }
-    }
-
-    for antinode in antinodes {
-        let cell: &mut char = map
-            .get_mut(antinode.1)
-            .unwrap()
-            .get_mut(antinode.0)
-            .unwrap();
-        *cell = '#';
     }
 
     for line in map {
@@ -139,6 +166,6 @@ mod test {
 
         let (p1, p2) = solve(input);
         assert_eq!(p1, Solution::from(14_u64));
-        assert_eq!(p2, Solution::from(0_u64));
+        assert_eq!(p2, Solution::from(34_u64));
     }
 }
