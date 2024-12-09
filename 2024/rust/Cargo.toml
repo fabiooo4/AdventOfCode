@@ -8,3 +8,4 @@ regex = "1.11.1"
 
 [features]
 visualize = []
+debug = []
