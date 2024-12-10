@@ -38,13 +38,12 @@ pub fn solve(input: &str) -> SolutionPair {
         })
         .collect();
 
-    // order_files_fragments(&mut files);
-
-    let sol1: u64 = calculate_checksum(&files);
+    let mut files_p1 = files.clone();
+    order_files_fragments(&mut files_p1);
+    let sol1: u64 = calculate_checksum(&files_p1);
 
     order_files(&mut files);
-
-    let sol2: u64 = 0;
+    let sol2: u64 = calculate_checksum(&files);
 
     (Solution::from(sol1), Solution::from(sol2))
 }
@@ -127,35 +126,83 @@ fn order_files_fragments(files: &mut Vec<File>) {
 
 fn order_files(files: &mut Vec<File>) {
     let current_order = files.clone();
-    for file in current_order.iter().rev() {
+    let mut files_len = files.len() - 1;
+    for (idx, _) in current_order.iter().rev().enumerate() {
         // println!("{:?}", files);
         #[cfg(all(not(test), any(feature = "visualize", feature = "debug")))]
         _print_files(files);
         #[cfg(all(not(test), any(feature = "visualize", feature = "debug")))]
         sleep(Duration::from_millis(3));
 
-        let last_file = match files.pop() {
+        let last_file = files.remove(files_len.saturating_sub(idx));
+        if last_file.size == 0 {
+            files.insert(files_len.saturating_sub(idx), last_file);
+            continue;
+        }
+        // println!("last: {:?}", last_file);
+
+        let free_idx = match files[0..files_len.saturating_sub(idx)]
+            .iter()
+            .position(|f| f.free >= last_file.size)
+        {
             Some(file) => file,
-            None => return,
+            None => {
+                files.insert(files_len.saturating_sub(idx), last_file);
+                continue;
+            }
         };
 
-        let first_free: &mut u64 = match files.iter_mut().find(|f| f.free >= last_file.size) {
-            Some(file) => &mut file.free,
-            None => continue,
-        };
+        let prev = files.get(files_len.saturating_sub(idx + 1)).unwrap();
+        let first_free: &File = files[0..files_len.saturating_sub(idx)]
+            .iter()
+            .find(|f| f.free >= last_file.size)
+            .unwrap();
 
-        *first_free = 0;
-        files.last_mut().unwrap().free += last_file.free;
+        if prev == first_free {
+            let first_free: &mut File = files[0..files_len.saturating_sub(idx)]
+                .iter_mut()
+                .find(|f| f.free >= last_file.size)
+                .unwrap();
+            // println!("free: {:?}", first_free);
 
-        let free_idx = files.iter().position(|f| f.free >= last_file.size).unwrap();
-        files.insert(
-            free_idx,
-            File::new(
-                last_file.id,
-                last_file.size,
-                first_free.saturating_sub(last_file.size),
-            ),
-        );
+            let free_space = first_free.free;
+            first_free.free = 0;
+
+            // println!(
+            //     "prev: {:?}",
+            //     files.get_mut(files_len.saturating_sub(idx + 1)).unwrap()
+            // );
+
+            files.insert(
+                free_idx + 1,
+                File::new(last_file.id, last_file.size, free_space + last_file.free),
+            );
+        } else {
+            let first_free: &mut File = files[0..files_len.saturating_sub(idx)]
+                .iter_mut()
+                .find(|f| f.free >= last_file.size)
+                .unwrap();
+
+            // println!("free: {:?}", first_free);
+
+            let free_space = first_free.free;
+            first_free.free = 0;
+
+            let prev: &mut File = files.get_mut(files_len.saturating_sub(idx + 1)).unwrap();
+            prev.free += last_file.size + last_file.free;
+
+            // println!(
+            //     "prev: {:?}",
+            //     files.get_mut(files_len.saturating_sub(idx + 1)).unwrap()
+            // );
+
+            files.insert(
+                free_idx + 1,
+                File::new(last_file.id, last_file.size, free_space - last_file.size),
+            );
+        }
+
+        files_len += 1;
     }
 }
 
@@ -163,10 +210,12 @@ fn calculate_checksum(files: &[File]) -> u64 {
     let mut count: u64 = 0;
     files.iter().fold(0, |acc, file| {
         let mut checksum: u64 = 0;
-        for _ in 0..file.size {
-            checksum += count * file.id;
-            count += 1;
+        for i in 0..(file.size + file.free) {
+            if i < file.size {
+                checksum += count * file.id;
+            }
             // println!("{},{count},{checksum},{acc}", file.id);
+            count += 1;
         }
         acc + checksum
     })
@@ -216,8 +265,9 @@ mod test {
     #[test]
     fn small() {
         let input = "12345";
-        let (p1, _) = solve(input);
+        let (p1, p2) = solve(input);
         assert_eq!(p1, Solution::from(60_u64));
+        assert_eq!(p2, Solution::from(132_u64));
     }
 
     #[test]
@@ -237,7 +287,8 @@ mod test {
     #[test]
     fn aoc_test() {
         let input = "2333133121414131402";
-        let (p1, _) = solve(input);
+        let (p1, p2) = solve(input);
         assert_eq!(p1, Solution::from(1928_u64));
+        assert_eq!(p2, Solution::from(2858_u64));
     }
 }
