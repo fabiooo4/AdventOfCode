@@ -1,8 +1,7 @@
-use std::{
-    fmt::{Debug, Display},
-    thread::sleep,
-    time::Duration,
-};
+use std::fmt::{Debug, Display};
+
+#[cfg(all(not(test), any(feature = "visualize", feature = "debug")))]
+use std::{thread::sleep, time::Duration};
 
 use crate::{Solution, SolutionPair};
 
