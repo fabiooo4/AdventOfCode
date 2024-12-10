@@ -57,7 +57,6 @@ fn _print_files(files: &Vec<File>) {
 
 fn order_files_fragments(files: &mut Vec<File>) {
     loop {
-        // println!("{:?}", files);
         #[cfg(all(not(test), any(feature = "visualize", feature = "debug")))]
         _print_files(files);
         #[cfg(all(not(test), any(feature = "visualize", feature = "debug")))]
@@ -71,17 +70,6 @@ fn order_files_fragments(files: &mut Vec<File>) {
             Some(file) => file,
             None => return,
         };
-
-        /* println!(
-            "last: {:?}, {}",
-            last_file,
-            files.len() - 1 - files.iter().rev().position(|f| f == last_file).unwrap()
-        );
-        println!(
-            "free: {:?}, {}",
-            first_free,
-            files.iter().position(|f| f == first_free).unwrap()
-        ); */
 
         if (last_file == first_free
             && files.len() - 1 - files.iter().rev().position(|f| f == last_file).unwrap()
@@ -116,9 +104,6 @@ fn order_files_fragments(files: &mut Vec<File>) {
 
             first_free.free = 0;
 
-            // println!("{free_idx}");
-            // println!("new: {:?}", new_file);
-
             files.insert(free_idx, new_file);
         }
     }
@@ -128,7 +113,6 @@ fn order_files(files: &mut Vec<File>) {
     let current_order = files.clone();
     let mut files_len = files.len() - 1;
     for (idx, _) in current_order.iter().rev().enumerate() {
-        // println!("{:?}", files);
         #[cfg(all(not(test), any(feature = "visualize", feature = "debug")))]
         _print_files(files);
         #[cfg(all(not(test), any(feature = "visualize", feature = "debug")))]
@@ -139,7 +123,6 @@ fn order_files(files: &mut Vec<File>) {
             files.insert(files_len.saturating_sub(idx), last_file);
             continue;
         }
-        // println!("last: {:?}", last_file);
 
         let free_idx = match files[0..files_len.saturating_sub(idx)]
             .iter()
@@ -163,15 +146,9 @@ fn order_files(files: &mut Vec<File>) {
                 .iter_mut()
                 .find(|f| f.free >= last_file.size)
                 .unwrap();
-            // println!("free: {:?}", first_free);
 
             let free_space = first_free.free;
             first_free.free = 0;
-
-            // println!(
-            //     "prev: {:?}",
-            //     files.get_mut(files_len.saturating_sub(idx + 1)).unwrap()
-            // );
 
             files.insert(
                 free_idx + 1,
@@ -183,18 +160,11 @@ fn order_files(files: &mut Vec<File>) {
                 .find(|f| f.free >= last_file.size)
                 .unwrap();
 
-            // println!("free: {:?}", first_free);
-
             let free_space = first_free.free;
             first_free.free = 0;
 
             let prev: &mut File = files.get_mut(files_len.saturating_sub(idx + 1)).unwrap();
             prev.free += last_file.size + last_file.free;
-
-            // println!(
-            //     "prev: {:?}",
-            //     files.get_mut(files_len.saturating_sub(idx + 1)).unwrap()
-            // );
 
             files.insert(
                 free_idx + 1,
@@ -214,7 +184,6 @@ fn calculate_checksum(files: &[File]) -> u64 {
             if i < file.size {
                 checksum += count * file.id;
             }
-            // println!("{},{count},{checksum},{acc}", file.id);
             count += 1;
         }
         acc + checksum
