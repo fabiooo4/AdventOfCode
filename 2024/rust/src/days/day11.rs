@@ -26,7 +26,7 @@ pub fn solve(input: &str) -> SolutionPair {
     (Solution::from(sol1), Solution::from(sol2))
 }
 
-// type StoneCache<G> = HashMap<Stone, G>;
+type StoneCache = HashMap<(Stone, usize), u64>;
 
 #[derive(Default, Debug, PartialEq, Eq, Clone, Copy, Hash)]
 struct Stone(u64);
