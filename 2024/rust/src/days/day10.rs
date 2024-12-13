@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 #[cfg(all(not(test), feature = "visualize"))]
 use std::{thread::sleep, time::Duration};
