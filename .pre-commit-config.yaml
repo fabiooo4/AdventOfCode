@@ -5,3 +5,4 @@ repos:
       - id: aoc-tiles
         args:
           - --auto-add-tiles-to-git=amend
+          - --what-to-show-on-right-side=checkmark
