@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+ctrlc = "3.4.5"
+image = "0.25.5"
 owo-colors = "4.1.0"
 regex = "1.11.1"
 
