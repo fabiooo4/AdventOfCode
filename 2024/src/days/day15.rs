@@ -14,10 +14,18 @@ pub fn solve(input: &str) -> SolutionPair {
     let (mut small_grid, directions) = parse_input(input).unwrap_or_else(|e| panic!("{e}"));
     let mut wide_grid = small_grid.to_wide();
 
-    small_grid.run_robot(&directions);
+    // small_grid.run_robot(&directions);
     let sol1: u64 = small_grid.calculate_gps();
 
-    wide_grid.run_robot(&directions);
+    // wide_grid.run_robot(&directions);
+    println!("{wide_grid}");
+    wide_grid.move_robot(&Direction::Left);
+    wide_grid.move_robot(&Direction::Down);
+    wide_grid.move_robot(&Direction::Left);
+    println!();
+    wide_grid.move_robot(&Direction::Up);
+    println!("{wide_grid}");
+
     let sol2: u64 = wide_grid.calculate_gps();
 
     (Solution::from(sol1), Solution::from(sol2))
@@ -319,7 +327,15 @@ where
         }
 
         // Move all the boxes touching in the same direction
-        if self.boxes.iter().any(|b| b.contains(&next_pos)) {
+        if self.boxes.iter().any(|b| {
+            println!(
+                "{:?} {:?} == {next_pos:?}: {}",
+                self.robot,
+                b,
+                b.contains(&next_pos)
+            );
+            b.contains(&next_pos)
+        }) {
             if let Some(amount) = self.move_boxes(next_pos, direction) {
                 self.robot += amount
             }
@@ -333,16 +349,12 @@ where
         position: Coordinate<i64>,
         direction: &Direction,
     ) -> Option<Coordinate<i64>> {
-        let mut next_pos = position
+        let next_pos = position
             + match self.boxes.first() {
                 Some(b) => b.size() * direction.delta(),
                 None => direction.delta().into(),
             };
-
-        // Consider the size of the box to calculate the next position
-        if let Some(b) = self.boxes.first() {
-            next_pos += b.size() + (-1, -1).into();
-        }
+        println!("nextpos: {next_pos:?}");
 
         // Out of bounds check
         if next_pos.x < 0
@@ -364,8 +376,13 @@ where
                 let current_box = self
                     .boxes
                     .iter_mut()
-                    .find(|&&mut b| b.contains(&position))
+                    .find(|&&mut b| {
+                        println!("INBOX {b:?} == {position:?}: {}", b.contains(&position));
+                        b.contains(&position)
+                    })
                     .unwrap();
+
+                println!("cb: {current_box:?}");
 
                 // Move the current box by the amount of the next one
                 current_box.move_by(amount);
@@ -379,6 +396,8 @@ where
                 .iter_mut()
                 .find(|&&mut b| b.contains(&position))
                 .unwrap();
+
+            println!("cbelse: {current_box:?}");
 
             // If no box next move the current box by the amount of the direction delta
             current_box.move_by(direction.delta().into());
