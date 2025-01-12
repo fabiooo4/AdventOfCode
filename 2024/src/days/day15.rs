@@ -1,5 +1,6 @@
 use owo_colors::OwoColorize;
 use std::{
+    collections::HashSet,
     fmt::Display,
     ops::{Add, AddAssign, Mul, Sub},
     thread::sleep,
@@ -45,8 +46,8 @@ fn parse_input(input: &str) -> Result<(Grid<SmallBox>, Vec<Direction>), String> 
     let height = grid.trim().lines().count();
     let width = grid.trim().lines().next().unwrap().trim().chars().count();
 
-    for (y, line) in grid.lines().enumerate() {
-        for (x, cell) in line.chars().enumerate() {
+    for (y, line) in grid.trim().lines().enumerate() {
+        for (x, cell) in line.trim().chars().enumerate() {
             let (x, y) = (x as i64, y as i64);
             match cell {
                 '@' => robot = Some(Coordinate::new(x, y)),
@@ -182,22 +183,31 @@ where
 //
 // Box
 //
-trait Box {
+trait FoodBox {
     fn position(&self) -> Coordinate<i64>;
 
-    fn display_char() -> char;
-
+    fn display_char() -> char
+    where
+        Self: Sized;
     fn move_by(&mut self, amount: Coordinate<i64>);
 
     fn contains(&self, position: &Coordinate<i64>) -> bool;
 
     fn size(&self) -> Coordinate<i64>;
+
+    fn boxes_in_direction<'a>(
+        &'a self,
+        direction: &Direction,
+        grid: &'a Grid<Self>,
+    ) -> HashSet<&'a Self>
+    where
+        Self: Sized;
 }
 
 //
 // SmallBox
 //
-#[derive(Clone, Copy, PartialEq, Debug, Default)]
+#[derive(Clone, Copy, PartialEq, Debug, Default, Eq, Hash)]
 struct SmallBox {
     position: Coordinate<i64>,
 }
@@ -226,7 +236,7 @@ impl AddAssign<Coordinate<i64>> for SmallBox {
     }
 }
 
-impl Box for SmallBox {
+impl FoodBox for SmallBox {
     fn position(&self) -> Coordinate<i64> {
         self.position
     }
@@ -246,12 +256,26 @@ impl Box for SmallBox {
     fn size(&self) -> Coordinate<i64> {
         Coordinate::new(1, 1)
     }
+
+    fn boxes_in_direction<'a>(
+        &'a self,
+        direction: &Direction,
+        grid: &'a Grid<SmallBox>,
+    ) -> HashSet<&'a SmallBox> {
+        let next_pos = self.position + (self.size() * direction.delta());
+        let mut boxes: HashSet<&SmallBox> = HashSet::from([self]);
+        if let Some(b) = grid.boxes.iter().find(|b| b.contains(&next_pos)) {
+            boxes.extend(b.boxes_in_direction(direction, grid));
+        }
+
+        boxes
+    }
 }
 
 //
 // WideBox
 //
-#[derive(Clone, Copy, PartialEq, Debug, Default)]
+#[derive(Clone, Copy, PartialEq, Debug, Default, Eq, Hash)]
 struct WideBox {
     left: Coordinate<i64>,
     right: Coordinate<i64>,
@@ -278,7 +302,7 @@ impl AddAssign<Coordinate<i64>> for WideBox {
     }
 }
 
-impl Box for WideBox {
+impl FoodBox for WideBox {
     fn position(&self) -> Coordinate<i64> {
         self.left
     }
@@ -303,6 +327,29 @@ impl Box for WideBox {
     fn size(&self) -> Coordinate<i64> {
         Coordinate::new(2, 1)
     }
+
+    fn boxes_in_direction<'a>(
+        &'a self,
+        direction: &Direction,
+        grid: &'a Grid<Self>,
+    ) -> HashSet<&'a Self>
+    where
+        Self: Sized,
+    {
+        let next_positions = [
+            self.left + (self.size() * direction.delta()),
+            self.right + (self.size() * direction.delta()),
+        ];
+        let mut boxes: HashSet<&WideBox> = HashSet::from([self]);
+
+        for next_pos in next_positions {
+            if let Some(b) = grid.boxes.iter().find(|b| b.contains(&next_pos)) {
+                boxes.extend(b.boxes_in_direction(direction, grid));
+            }
+        }
+
+        boxes
+    }
 }
 
 //
@@ -319,7 +366,7 @@ struct Grid<T> {
 
 impl<T> Grid<T>
 where
-    T: PartialEq + Box + Copy + std::fmt::Debug + Default + Add<Coordinate<i64>, Output = T>,
+    T: PartialEq + FoodBox + Copy + std::fmt::Debug + Default + Add<Coordinate<i64>, Output = T>,
 {
     fn new(
         robot: Coordinate<i64>,
@@ -364,7 +411,6 @@ where
         }
     }
 
-    // TODO: try with a for loop for each box above the current one
     fn move_boxes(&mut self, current_box: T, direction: &Direction) -> Option<Coordinate<i64>> {
         // If the current position is different from the leftmost position of the box shift it to
         // the left of the box
@@ -469,7 +515,7 @@ where
     }
 }
 
-impl<T: Box> Display for Grid<T> {
+impl<T: FoodBox> Display for Grid<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut grid: Vec<Vec<char>> = vec![vec![' '; self.width]; self.height];
 
@@ -570,5 +616,132 @@ mod test {
 
         let b = boxes.iter().find(|b| b.contains(&position));
         assert_eq!(b, Some(&WideBox::new((2, 2).into(), (3, 2).into())));
+    }
+
+    #[test]
+    fn smallboxes_in_direction() {
+        let input = "
+            ###
+            #O#
+            #.#
+            #O#
+            #O#
+            #O#
+            #@#
+            ###
+
+            ^
+            ";
+
+        let (grid, _) = parse_input(input).unwrap();
+        let b = grid
+            .boxes
+            .iter()
+            .find(|&&b| b == SmallBox::new(1, 5))
+            .unwrap();
+        let boxes_above = b.boxes_in_direction(&Direction::Up, &grid);
+
+        assert_eq!(
+            boxes_above,
+            HashSet::from([
+                &SmallBox::new(1, 5),
+                &SmallBox::new(1, 4),
+                &SmallBox::new(1, 3),
+            ])
+        )
+    }
+
+    #[test]
+    fn wideboxes_in_direction() {
+        let input = "
+            ###
+            #@#
+            #O#
+            #O#
+            #O#
+            #.#
+            #O#
+            ###
+
+            ^
+            ";
+
+        let (grid, _) = parse_input(input).unwrap();
+        let grid = grid.to_wide();
+        let b = grid
+            .boxes
+            .iter()
+            .find(|&&b| b == WideBox::new((2, 2).into(), (3, 2).into()))
+            .unwrap();
+        let boxes_below = b.boxes_in_direction(&Direction::Down, &grid);
+        assert_eq!(
+            boxes_below,
+            HashSet::from([
+                &WideBox::new((2, 2).into(), (3, 2).into()),
+                &WideBox::new((2, 3).into(), (3, 3).into()),
+                &WideBox::new((2, 4).into(), (3, 4).into())
+            ])
+        );
+
+        let input = "
+            #####
+            #...#
+            #@O.#
+            #.OO#
+            #...#
+            #####
+
+            ^
+            ";
+
+        let (grid, _) = parse_input(input).unwrap();
+
+        let mut grid = grid.to_wide();
+        let b = grid
+            .boxes
+            .iter()
+            .find(|&&b| b == WideBox::new((4, 3).into(), (5, 3).into()))
+            .unwrap();
+        let boxes_below = b.boxes_in_direction(&Direction::Down, &grid);
+
+        assert_eq!(
+            boxes_below,
+            HashSet::from([&WideBox::new((4, 3).into(), (5, 3).into()),])
+        );
+
+        let boxes_right = b.boxes_in_direction(&Direction::Right, &grid);
+        assert_eq!(
+            boxes_right,
+            HashSet::from([
+                &WideBox::new((4, 3).into(), (5, 3).into()),
+                &WideBox::new((6, 3).into(), (7, 3).into())
+            ])
+        );
+
+        grid.move_robot(&Direction::Right);
+        grid.move_robot(&Direction::Right);
+        /*
+        ##########
+        ##......##
+        ##..@[].##
+        ##..[][]##
+        ##......##
+        ##########
+        */
+        let b = grid
+            .boxes
+            .iter()
+            .find(|&&b| b == WideBox::new((5, 2).into(), (6, 2).into()))
+            .unwrap();
+        let boxes_below = b.boxes_in_direction(&Direction::Down, &grid);
+
+        assert_eq!(
+            boxes_below,
+            HashSet::from([
+                &WideBox::new((5, 2).into(), (6, 2).into()),
+                &WideBox::new((4, 3).into(), (5, 3).into()),
+                &WideBox::new((6, 3).into(), (7, 3).into())
+            ])
+        );
     }
 }
