@@ -1,7 +1,7 @@
 use owo_colors::OwoColorize;
 use std::{
     fmt::Display,
-    ops::{Add, AddAssign, Mul},
+    ops::{Add, AddAssign, Mul, Sub},
     thread::sleep,
     time::Duration,
 };
@@ -21,11 +21,13 @@ pub fn solve(input: &str) -> SolutionPair {
     println!("{wide_grid}");
     wide_grid.move_robot(&Direction::Left);
     wide_grid.move_robot(&Direction::Down);
+    wide_grid.move_robot(&Direction::Down);
     wide_grid.move_robot(&Direction::Left);
+    wide_grid.move_robot(&Direction::Left);
+    println!("{wide_grid}");
     println!();
     wide_grid.move_robot(&Direction::Up);
     println!("{wide_grid}");
-
     let sol2: u64 = wide_grid.calculate_gps();
 
     (Solution::from(sol1), Solution::from(sol2))
@@ -152,6 +154,14 @@ impl<T: Add<Output = T>> Add<Coordinate<T>> for Coordinate<T> {
     }
 }
 
+impl<T: Sub<Output = T>> Sub<Coordinate<T>> for Coordinate<T> {
+    type Output = Self;
+
+    fn sub(self, rhs: Coordinate<T>) -> Self::Output {
+        Coordinate::new(self.x - rhs.x, self.y - rhs.y)
+    }
+}
+
 impl<T: Mul<Output = T>> Mul<(T, T)> for Coordinate<T> {
     type Output = Self;
 
@@ -200,6 +210,16 @@ impl SmallBox {
     }
 }
 
+impl Add<Coordinate<i64>> for SmallBox {
+    type Output = Self;
+
+    fn add(self, rhs: Coordinate<i64>) -> Self::Output {
+        Self {
+            position: self.position + rhs,
+        }
+    }
+}
+
 impl AddAssign<Coordinate<i64>> for SmallBox {
     fn add_assign(&mut self, rhs: Coordinate<i64>) {
         self.position += rhs
@@ -240,6 +260,14 @@ struct WideBox {
 impl WideBox {
     fn new(left: Coordinate<i64>, right: Coordinate<i64>) -> Self {
         Self { left, right }
+    }
+}
+
+impl Add<Coordinate<i64>> for WideBox {
+    type Output = Self;
+
+    fn add(self, rhs: Coordinate<i64>) -> Self::Output {
+        Self::new(self.left + rhs, self.right + rhs)
     }
 }
 
@@ -291,7 +319,7 @@ struct Grid<T> {
 
 impl<T> Grid<T>
 where
-    T: PartialEq + Box + Copy + std::fmt::Debug + Default,
+    T: PartialEq + Box + Copy + std::fmt::Debug + Default + Add<Coordinate<i64>, Output = T>,
 {
     fn new(
         robot: Coordinate<i64>,
@@ -327,16 +355,8 @@ where
         }
 
         // Move all the boxes touching in the same direction
-        if self.boxes.iter().any(|b| {
-            println!(
-                "{:?} {:?} == {next_pos:?}: {}",
-                self.robot,
-                b,
-                b.contains(&next_pos)
-            );
-            b.contains(&next_pos)
-        }) {
-            if let Some(amount) = self.move_boxes(next_pos, direction) {
+        if let Some(next_box) = self.boxes.iter().find(|b| b.contains(&next_pos)) {
+            if let Some(amount) = self.move_boxes(*next_box, direction) {
                 self.robot += amount
             }
         } else {
@@ -344,45 +364,49 @@ where
         }
     }
 
-    fn move_boxes(
-        &mut self,
-        position: Coordinate<i64>,
-        direction: &Direction,
-    ) -> Option<Coordinate<i64>> {
-        let next_pos = position
-            + match self.boxes.first() {
-                Some(b) => b.size() * direction.delta(),
-                None => direction.delta().into(),
-            };
-        println!("nextpos: {next_pos:?}");
+    // TODO try with a for loop for each box above the current one
+    fn move_boxes(&mut self, current_box: T, direction: &Direction) -> Option<Coordinate<i64>> {
+        // If the current position is different from the leftmost position of the box shift it to
+        // the left of the box
+        /* if let Some(b) = self.boxes.iter().find(|b| b.contains(&next_box.position())) {
+            if next_box != b.position() {
+                next_box = next_box - (b.size() - (1,1).into());
+            }
+        } */
+
+        /* let next_pos = next_box
+        + match self.boxes.first() {
+            Some(b) => b.size() * direction.delta(),
+            None => direction.delta().into(),
+        }; */
+
+        let next_box = current_box + current_box.size() * direction.delta();
+
+        println!("current: {current_box:?}");
+        println!("next: {next_box:?}");
 
         // Out of bounds check
-        if next_pos.x < 0
-            || next_pos.y < 0
-            || next_pos.x > self.width as i64
-            || next_pos.y > self.height as i64
+        if next_box.position().x < 0
+            || next_box.position().y < 0
+            || next_box.position().x + next_box.size().x - 1 > self.width as i64
+            || next_box.position().y > self.height as i64
         {
             return None;
         }
 
-        if self.walls.contains(&next_pos) {
+        if self.walls.contains(&next_box.position()) {
             // If there is a wall next, don't move
             return None;
         }
 
-        if self.boxes.iter().any(|b| b.contains(&next_pos)) {
+        if self.boxes.iter().any(|&b| b == next_box) {
             // If there is a box next move that box
-            if let Some(amount) = self.move_boxes(next_pos, direction) {
+            if let Some(amount) = self.move_boxes(next_box, direction) {
                 let current_box = self
                     .boxes
                     .iter_mut()
-                    .find(|&&mut b| {
-                        println!("INBOX {b:?} == {position:?}: {}", b.contains(&position));
-                        b.contains(&position)
-                    })
+                    .find(|&&mut b| b == current_box)
                     .unwrap();
-
-                println!("cb: {current_box:?}");
 
                 // Move the current box by the amount of the next one
                 current_box.move_by(amount);
@@ -394,10 +418,8 @@ where
             let current_box = self
                 .boxes
                 .iter_mut()
-                .find(|&&mut b| b.contains(&position))
+                .find(|&&mut b| b == current_box)
                 .unwrap();
-
-            println!("cbelse: {current_box:?}");
 
             // If no box next move the current box by the amount of the direction delta
             current_box.move_by(direction.delta().into());
@@ -411,7 +433,7 @@ where
             self.move_robot(direction);
             println!("{}[2J", 27 as char);
             println!("{self}");
-            sleep(Duration::from_millis(100));
+            sleep(Duration::from_millis(500));
         }
     }
 
