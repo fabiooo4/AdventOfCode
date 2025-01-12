@@ -364,7 +364,7 @@ where
         }
     }
 
-    // TODO try with a for loop for each box above the current one
+    // TODO: try with a for loop for each box above the current one
     fn move_boxes(&mut self, current_box: T, direction: &Direction) -> Option<Coordinate<i64>> {
         // If the current position is different from the leftmost position of the box shift it to
         // the left of the box
