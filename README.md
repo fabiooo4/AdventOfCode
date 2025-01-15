@@ -1,6 +1,6 @@
 <!-- AOC TILES BEGIN -->
-<h1 align="center"> 
-  2024 - 29 ⭐ - Rust
+<h1 align="center">
+  2024 - 50 ⭐ - Rust
 </h1>
 <a href="2024/src/days/day01.rs">
   <img src=".aoc_tiles/tiles/2024/01.png" width="161px">
@@ -47,8 +47,38 @@
 <a href="2024/src/days/day15.rs">
   <img src=".aoc_tiles/tiles/2024/15.png" width="161px">
 </a>
+<a href="2024/src/days/day16.rs">
+  <img src=".aoc_tiles/tiles/2024/16.png" width="161px">
+</a>
+<a href="2024/src/days/day17.rs">
+  <img src=".aoc_tiles/tiles/2024/17.png" width="161px">
+</a>
+<a href="2024/src/days/day18.rs">
+  <img src=".aoc_tiles/tiles/2024/18.png" width="161px">
+</a>
+<a href="2024/src/days/day19.rs">
+  <img src=".aoc_tiles/tiles/2024/19.png" width="161px">
+</a>
+<a href="2024/src/days/day20.rs">
+  <img src=".aoc_tiles/tiles/2024/20.png" width="161px">
+</a>
+<a href="2024/src/days/day21.rs">
+  <img src=".aoc_tiles/tiles/2024/21.png" width="161px">
+</a>
+<a href="2024/src/days/day22.rs">
+  <img src=".aoc_tiles/tiles/2024/22.png" width="161px">
+</a>
+<a href="2024/src/days/day23.rs">
+  <img src=".aoc_tiles/tiles/2024/23.png" width="161px">
+</a>
+<a href="2024/src/days/day24.rs">
+  <img src=".aoc_tiles/tiles/2024/24.png" width="161px">
+</a>
+<a href="2024/src/days/day25.rs">
+  <img src=".aoc_tiles/tiles/2024/25.png" width="161px">
+</a>
 <h1 align="center">
-  2023 - 7 ⭐ - C
+  2023 - 8 ⭐ - C
 </h1>
 <a href="2023/day01/part1.c">
   <img src=".aoc_tiles/tiles/2023/01.png" width="161px">
