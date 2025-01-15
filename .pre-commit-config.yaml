@@ -6,3 +6,4 @@ repos:
         args:
           - --auto-add-tiles-to-git=amend
           - --what-to-show-on-right-side=checkmark
+          - --day-pattern "(?<![\d.])([012]?\d)(?!\d)"
