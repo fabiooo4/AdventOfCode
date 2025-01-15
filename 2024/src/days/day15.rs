@@ -2,10 +2,11 @@ use owo_colors::OwoColorize;
 use std::{
     collections::HashSet,
     fmt::Display,
-    ops::{Add, AddAssign, Mul, Sub},
-    thread::sleep,
-    time::Duration,
+    ops::{Add, AddAssign, Mul},
 };
+
+#[cfg(all(not(test), feature = "visualize"))]
+use std::{thread::sleep, time::Duration};
 
 use crate::{Solution, SolutionPair};
 
@@ -15,20 +16,10 @@ pub fn solve(input: &str) -> SolutionPair {
     let (mut small_grid, directions) = parse_input(input).unwrap_or_else(|e| panic!("{e}"));
     let mut wide_grid = small_grid.to_wide();
 
-    // small_grid.run_robot(&directions);
+    small_grid.run_robot(&directions);
     let sol1: u64 = small_grid.calculate_gps();
 
-    // wide_grid.run_robot(&directions);
-    println!("{wide_grid}");
-    wide_grid.move_robot(&Direction::Left);
-    wide_grid.move_robot(&Direction::Down);
-    wide_grid.move_robot(&Direction::Down);
-    wide_grid.move_robot(&Direction::Left);
-    wide_grid.move_robot(&Direction::Left);
-    println!("{wide_grid}");
-    println!();
-    wide_grid.move_robot(&Direction::Up);
-    println!("{wide_grid}");
+    wide_grid.run_robot(&directions);
     let sol2: u64 = wide_grid.calculate_gps();
 
     (Solution::from(sol1), Solution::from(sol2))
@@ -74,285 +65,6 @@ fn parse_input(input: &str) -> Result<(Grid<SmallBox>, Vec<Direction>), String> 
 }
 
 //
-// Direction
-//
-#[derive(Debug)]
-enum Direction {
-    Up,
-    Down,
-    Left,
-    Right,
-}
-
-impl TryFrom<char> for Direction {
-    type Error = String;
-
-    fn try_from(c: char) -> Result<Self, Self::Error> {
-        match c {
-            '^' => Ok(Direction::Up),
-            'v' => Ok(Direction::Down),
-            '<' => Ok(Direction::Left),
-            '>' => Ok(Direction::Right),
-            _ => Err(String::from(
-                "Cannot parse chars different from: '^' 'v' '<' '>'",
-            )),
-        }
-    }
-}
-
-impl Direction {
-    fn delta(&self) -> (i64, i64) {
-        match self {
-            Direction::Up => (0, -1),
-            Direction::Down => (0, 1),
-            Direction::Left => (-1, 0),
-            Direction::Right => (1, 0),
-        }
-    }
-}
-
-impl Display for Direction {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                Direction::Up => '^',
-                Direction::Down => 'v',
-                Direction::Left => '<',
-                Direction::Right => '>',
-            }
-        )
-    }
-}
-
-//
-// Coordinate
-//
-#[derive(Debug, PartialEq, Clone, Copy, Hash, Eq, Default)]
-struct Coordinate<T> {
-    pub x: T,
-    pub y: T,
-}
-
-impl<T> Coordinate<T> {
-    fn new(x: T, y: T) -> Self {
-        Coordinate { x, y }
-    }
-}
-
-impl<T> From<(T, T)> for Coordinate<T> {
-    fn from(tuple: (T, T)) -> Self {
-        Coordinate::new(tuple.0, tuple.1)
-    }
-}
-
-impl<T: Add<Output = T>> Add<Coordinate<T>> for Coordinate<T> {
-    type Output = Self;
-
-    fn add(self, rhs: Coordinate<T>) -> Self::Output {
-        Coordinate::new(self.x + rhs.x, self.y + rhs.y)
-    }
-}
-
-impl<T: Sub<Output = T>> Sub<Coordinate<T>> for Coordinate<T> {
-    type Output = Self;
-
-    fn sub(self, rhs: Coordinate<T>) -> Self::Output {
-        Coordinate::new(self.x - rhs.x, self.y - rhs.y)
-    }
-}
-
-impl<T: Mul<Output = T>> Mul<(T, T)> for Coordinate<T> {
-    type Output = Self;
-
-    fn mul(self, rhs: (T, T)) -> Self::Output {
-        Coordinate::new(self.x * rhs.0, self.y * rhs.1)
-    }
-}
-
-impl<T> AddAssign<Coordinate<T>> for Coordinate<T>
-where
-    T: AddAssign + Add<Output = T> + Copy,
-{
-    fn add_assign(&mut self, rhs: Coordinate<T>) {
-        *self = *self + rhs
-    }
-}
-
-//
-// Box
-//
-trait FoodBox {
-    fn position(&self) -> Coordinate<i64>;
-
-    fn display_char() -> char
-    where
-        Self: Sized;
-    fn move_by(&mut self, amount: Coordinate<i64>);
-
-    fn contains(&self, position: &Coordinate<i64>) -> bool;
-
-    fn size(&self) -> Coordinate<i64>;
-
-    fn boxes_in_direction<'a>(
-        &'a self,
-        direction: &Direction,
-        grid: &'a Grid<Self>,
-    ) -> HashSet<&'a Self>
-    where
-        Self: Sized;
-}
-
-//
-// SmallBox
-//
-#[derive(Clone, Copy, PartialEq, Debug, Default, Eq, Hash)]
-struct SmallBox {
-    position: Coordinate<i64>,
-}
-
-impl SmallBox {
-    fn new(x: i64, y: i64) -> Self {
-        Self {
-            position: Coordinate::new(x, y),
-        }
-    }
-}
-
-impl Add<Coordinate<i64>> for SmallBox {
-    type Output = Self;
-
-    fn add(self, rhs: Coordinate<i64>) -> Self::Output {
-        Self {
-            position: self.position + rhs,
-        }
-    }
-}
-
-impl AddAssign<Coordinate<i64>> for SmallBox {
-    fn add_assign(&mut self, rhs: Coordinate<i64>) {
-        self.position += rhs
-    }
-}
-
-impl FoodBox for SmallBox {
-    fn position(&self) -> Coordinate<i64> {
-        self.position
-    }
-
-    fn display_char() -> char {
-        'O'
-    }
-
-    fn move_by(&mut self, amount: Coordinate<i64>) {
-        *self += amount;
-    }
-
-    fn contains(&self, position: &Coordinate<i64>) -> bool {
-        self.position == *position
-    }
-
-    fn size(&self) -> Coordinate<i64> {
-        Coordinate::new(1, 1)
-    }
-
-    fn boxes_in_direction<'a>(
-        &'a self,
-        direction: &Direction,
-        grid: &'a Grid<SmallBox>,
-    ) -> HashSet<&'a SmallBox> {
-        let next_pos = self.position + (self.size() * direction.delta());
-        let mut boxes: HashSet<&SmallBox> = HashSet::from([self]);
-        if let Some(b) = grid.boxes.iter().find(|b| b.contains(&next_pos)) {
-            boxes.extend(b.boxes_in_direction(direction, grid));
-        }
-
-        boxes
-    }
-}
-
-//
-// WideBox
-//
-#[derive(Clone, Copy, PartialEq, Debug, Default, Eq, Hash)]
-struct WideBox {
-    left: Coordinate<i64>,
-    right: Coordinate<i64>,
-}
-
-impl WideBox {
-    fn new(left: Coordinate<i64>, right: Coordinate<i64>) -> Self {
-        Self { left, right }
-    }
-}
-
-impl Add<Coordinate<i64>> for WideBox {
-    type Output = Self;
-
-    fn add(self, rhs: Coordinate<i64>) -> Self::Output {
-        Self::new(self.left + rhs, self.right + rhs)
-    }
-}
-
-impl AddAssign<Coordinate<i64>> for WideBox {
-    fn add_assign(&mut self, rhs: Coordinate<i64>) {
-        self.left += rhs;
-        self.right += rhs;
-    }
-}
-
-impl FoodBox for WideBox {
-    fn position(&self) -> Coordinate<i64> {
-        self.left
-    }
-
-    fn display_char() -> char {
-        '['
-    }
-
-    fn move_by(&mut self, amount: Coordinate<i64>) {
-        *self += amount;
-    }
-
-    fn contains(&self, position: &Coordinate<i64>) -> bool {
-        let left_pos = *position + Direction::Left.delta().into();
-        let right_pos = *position + Direction::Right.delta().into();
-
-        // The box is wide 2 positions, so for each position there can be 2 possible WideBoxes
-        (self.right == *position && self.left == left_pos)
-            || (self.left == *position && self.right == right_pos)
-    }
-
-    fn size(&self) -> Coordinate<i64> {
-        Coordinate::new(2, 1)
-    }
-
-    fn boxes_in_direction<'a>(
-        &'a self,
-        direction: &Direction,
-        grid: &'a Grid<Self>,
-    ) -> HashSet<&'a Self>
-    where
-        Self: Sized,
-    {
-        let next_positions = [
-            self.left + (self.size() * direction.delta()),
-            self.right + (self.size() * direction.delta()),
-        ];
-        let mut boxes: HashSet<&WideBox> = HashSet::from([self]);
-
-        for next_pos in next_positions {
-            if let Some(b) = grid.boxes.iter().find(|b| b.contains(&next_pos)) {
-                boxes.extend(b.boxes_in_direction(direction, grid));
-            }
-        }
-
-        boxes
-    }
-}
-
-//
 // Grid
 //
 #[derive(Clone)]
@@ -366,7 +78,7 @@ struct Grid<T> {
 
 impl<T> Grid<T>
 where
-    T: PartialEq + FoodBox + Copy + std::fmt::Debug + Default + Add<Coordinate<i64>, Output = T>,
+    T: FoodBox + Copy + Add<Coordinate<i64>, Output = T> + AddAssign<Coordinate<i64>>,
 {
     fn new(
         robot: Coordinate<i64>,
@@ -404,71 +116,47 @@ where
         // Move all the boxes touching in the same direction
         if let Some(next_box) = self.boxes.iter().find(|b| b.contains(&next_pos)) {
             if let Some(amount) = self.move_boxes(*next_box, direction) {
+                // Move the robot by the amount that the boxes have moved
                 self.robot += amount
             }
         } else {
+            // If there is no box next move the robot
             self.robot += direction.delta().into()
         }
     }
 
     fn move_boxes(&mut self, current_box: T, direction: &Direction) -> Option<Coordinate<i64>> {
-        // If the current position is different from the leftmost position of the box shift it to
-        // the left of the box
-        /* if let Some(b) = self.boxes.iter().find(|b| b.contains(&next_box.position())) {
-            if next_box != b.position() {
-                next_box = next_box - (b.size() - (1,1).into());
-            }
-        } */
-
-        /* let next_pos = next_box
-        + match self.boxes.first() {
-            Some(b) => b.size() * direction.delta(),
-            None => direction.delta().into(),
-        }; */
-
-        let next_box = current_box + current_box.size() * direction.delta();
-
-        println!("current: {current_box:?}");
-        println!("next: {next_box:?}");
+        let next_box = current_box + direction.delta().into();
 
         // Out of bounds check
         if next_box.position().x < 0
             || next_box.position().y < 0
-            || next_box.position().x + next_box.size().x - 1 > self.width as i64
+            || next_box.position().x > self.width as i64
             || next_box.position().y > self.height as i64
         {
             return None;
         }
 
-        if self.walls.contains(&next_box.position()) {
-            // If there is a wall next, don't move
-            return None;
+        let boxes_in_dir = current_box.boxes_in_direction(direction, self);
+
+        for &idx in &boxes_in_dir {
+            if let Some(b) = self.boxes.get_mut(idx) {
+                if self
+                    .walls
+                    .iter()
+                    .any(|w| (*b + direction.delta().into()).contains(w))
+                {
+                    // If there is a wall next, don't move
+                    return None;
+                }
+            }
         }
 
-        if self.boxes.iter().any(|&b| b == next_box) {
-            // If there is a box next move that box
-            if let Some(amount) = self.move_boxes(next_box, direction) {
-                let current_box = self
-                    .boxes
-                    .iter_mut()
-                    .find(|&&mut b| b == current_box)
-                    .unwrap();
-
-                // Move the current box by the amount of the next one
-                current_box.move_by(amount);
-                return Some(amount);
-            } else {
-                return None;
+        // Move all the boxes that are touching in the same direction
+        for idx in boxes_in_dir {
+            if let Some(b) = self.boxes.get_mut(idx) {
+                b.move_by(direction.delta().into())
             }
-        } else {
-            let current_box = self
-                .boxes
-                .iter_mut()
-                .find(|&&mut b| b == current_box)
-                .unwrap();
-
-            // If no box next move the current box by the amount of the direction delta
-            current_box.move_by(direction.delta().into());
         }
 
         Some(direction.delta().into())
@@ -477,9 +165,12 @@ where
     fn run_robot(&mut self, directions: &[Direction]) {
         for direction in directions {
             self.move_robot(direction);
-            println!("{}[2J", 27 as char);
-            println!("{self}");
-            sleep(Duration::from_millis(500));
+            #[cfg(all(not(test), feature = "visualize"))]
+            {
+                println!("{}[2J", 27 as char);
+                println!("{self}");
+                sleep(Duration::from_millis(4));
+            }
         }
     }
 
@@ -576,6 +267,244 @@ impl<T: FoodBox> Display for Grid<T> {
     }
 }
 
+//
+// FoodBox
+//
+trait FoodBox {
+    fn position(&self) -> Coordinate<i64>;
+
+    fn display_char() -> char
+    where
+        Self: Sized;
+
+    fn move_by(&mut self, amount: Coordinate<i64>)
+    where
+        Self: AddAssign<Coordinate<i64>>,
+    {
+        *self += amount
+    }
+
+    fn contains(&self, position: &Coordinate<i64>) -> bool;
+
+    /// Returns the indices of all the boxes that are touching in the same direction
+    fn boxes_in_direction(&self, direction: &Direction, grid: &Grid<Self>) -> HashSet<usize>
+    where
+        Self: Sized;
+}
+
+//
+// SmallBox
+//
+#[derive(Clone, Copy, PartialEq, Debug, Default, Eq, Hash)]
+struct SmallBox {
+    position: Coordinate<i64>,
+}
+
+impl SmallBox {
+    fn new(x: i64, y: i64) -> Self {
+        Self {
+            position: Coordinate::new(x, y),
+        }
+    }
+}
+
+impl FoodBox for SmallBox {
+    fn position(&self) -> Coordinate<i64> {
+        self.position
+    }
+
+    fn display_char() -> char {
+        'O'
+    }
+
+    fn contains(&self, position: &Coordinate<i64>) -> bool {
+        self.position == *position
+    }
+
+    fn boxes_in_direction(&self, direction: &Direction, grid: &Grid<SmallBox>) -> HashSet<usize> {
+        let next_pos = self.position + direction.delta().into();
+        let mut idxs: HashSet<usize> =
+            HashSet::from([grid.boxes.iter().position(|b| b == self).unwrap()]);
+        if let Some(b) = grid.boxes.iter().find(|b| b.contains(&next_pos)) {
+            let i = b.boxes_in_direction(direction, grid);
+            idxs.extend(i);
+        }
+
+        idxs
+    }
+}
+
+impl Add<Coordinate<i64>> for SmallBox {
+    type Output = Self;
+
+    fn add(self, rhs: Coordinate<i64>) -> Self::Output {
+        Self {
+            position: self.position + rhs,
+        }
+    }
+}
+
+impl AddAssign<Coordinate<i64>> for SmallBox {
+    fn add_assign(&mut self, rhs: Coordinate<i64>) {
+        self.position += rhs
+    }
+}
+
+//
+// WideBox
+//
+#[derive(Clone, Copy, PartialEq, Debug, Default, Eq, Hash)]
+struct WideBox {
+    left: Coordinate<i64>,
+    right: Coordinate<i64>,
+}
+
+impl WideBox {
+    fn new(left: Coordinate<i64>, right: Coordinate<i64>) -> Self {
+        Self { left, right }
+    }
+}
+
+impl FoodBox for WideBox {
+    fn position(&self) -> Coordinate<i64> {
+        self.left
+    }
+
+    fn display_char() -> char {
+        '['
+    }
+
+    fn contains(&self, position: &Coordinate<i64>) -> bool {
+        let left_pos = *position + Direction::Left.delta().into();
+        let right_pos = *position + Direction::Right.delta().into();
+
+        // The box is wide 2 positions, so for each position there can be 2 possible WideBoxes
+        (self.right == *position && self.left == left_pos)
+            || (self.left == *position && self.right == right_pos)
+    }
+
+    fn boxes_in_direction(&self, direction: &Direction, grid: &Grid<Self>) -> HashSet<usize> {
+        let next_positions = [
+            self.left + direction.delta().into(),
+            self.right + direction.delta().into(),
+        ];
+        let mut idxs: HashSet<usize> =
+            HashSet::from([grid.boxes.iter().position(|b| b == self).unwrap()]);
+
+        for next_pos in next_positions {
+            if let Some(b) = grid
+                .boxes
+                .iter()
+                .find(|&b| b.contains(&next_pos) && b != self)
+            {
+                let i = b.boxes_in_direction(direction, grid);
+                idxs.extend(i);
+            }
+        }
+
+        idxs
+    }
+}
+
+impl Add<Coordinate<i64>> for WideBox {
+    type Output = Self;
+
+    fn add(self, rhs: Coordinate<i64>) -> Self::Output {
+        Self::new(self.left + rhs, self.right + rhs)
+    }
+}
+
+impl AddAssign<Coordinate<i64>> for WideBox {
+    fn add_assign(&mut self, rhs: Coordinate<i64>) {
+        self.left += rhs;
+        self.right += rhs;
+    }
+}
+
+//
+// Coordinate
+//
+#[derive(Debug, PartialEq, Clone, Copy, Hash, Eq, Default)]
+struct Coordinate<T> {
+    pub x: T,
+    pub y: T,
+}
+
+impl<T> Coordinate<T> {
+    fn new(x: T, y: T) -> Self {
+        Coordinate { x, y }
+    }
+}
+
+impl<T> From<(T, T)> for Coordinate<T> {
+    fn from(tuple: (T, T)) -> Self {
+        Coordinate::new(tuple.0, tuple.1)
+    }
+}
+
+impl<T: Add<Output = T>> Add<Coordinate<T>> for Coordinate<T> {
+    type Output = Self;
+
+    fn add(self, rhs: Coordinate<T>) -> Self::Output {
+        Coordinate::new(self.x + rhs.x, self.y + rhs.y)
+    }
+}
+
+impl<T: Mul<Output = T>> Mul<(T, T)> for Coordinate<T> {
+    type Output = Self;
+
+    fn mul(self, rhs: (T, T)) -> Self::Output {
+        Coordinate::new(self.x * rhs.0, self.y * rhs.1)
+    }
+}
+
+impl<T> AddAssign<Coordinate<T>> for Coordinate<T>
+where
+    T: AddAssign + Add<Output = T> + Copy,
+{
+    fn add_assign(&mut self, rhs: Coordinate<T>) {
+        *self = *self + rhs
+    }
+}
+
+//
+// Direction
+//
+#[derive(Debug)]
+enum Direction {
+    Up,
+    Down,
+    Left,
+    Right,
+}
+
+impl TryFrom<char> for Direction {
+    type Error = String;
+
+    fn try_from(c: char) -> Result<Self, Self::Error> {
+        match c {
+            '^' => Ok(Direction::Up),
+            'v' => Ok(Direction::Down),
+            '<' => Ok(Direction::Left),
+            '>' => Ok(Direction::Right),
+            _ => Err(String::from(
+                "Cannot parse chars different from: '^' 'v' '<' '>'",
+            )),
+        }
+    }
+}
+
+impl Direction {
+    fn delta(&self) -> (i64, i64) {
+        match self {
+            Direction::Up => (0, -1),
+            Direction::Down => (0, 1),
+            Direction::Left => (-1, 0),
+            Direction::Right => (1, 0),
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -643,12 +572,12 @@ mod test {
 
         assert_eq!(
             boxes_above,
-            HashSet::from([
-                &SmallBox::new(1, 5),
-                &SmallBox::new(1, 4),
-                &SmallBox::new(1, 3),
-            ])
-        )
+            HashSet::from([1, 2, 3]) /* HashSet::from([
+                                         &SmallBox::new(1, 5),
+                                         &SmallBox::new(1, 4),
+                                         &SmallBox::new(1, 3),
+                                     ]) */
+        );
     }
 
     #[test]
@@ -677,9 +606,10 @@ mod test {
         assert_eq!(
             boxes_below,
             HashSet::from([
-                &WideBox::new((2, 2).into(), (3, 2).into()),
-                &WideBox::new((2, 3).into(), (3, 3).into()),
-                &WideBox::new((2, 4).into(), (3, 4).into())
+                0, 1,
+                2 /* &WideBox::new((2, 2).into(), (3, 2).into()),
+                  &WideBox::new((2, 3).into(), (3, 3).into()),
+                  &WideBox::new((2, 4).into(), (3, 4).into()) */
             ])
         );
 
@@ -706,15 +636,16 @@ mod test {
 
         assert_eq!(
             boxes_below,
-            HashSet::from([&WideBox::new((4, 3).into(), (5, 3).into()),])
+            HashSet::from([1 /* &WideBox::new((4, 3).into(), (5, 3).into()), */])
         );
 
         let boxes_right = b.boxes_in_direction(&Direction::Right, &grid);
         assert_eq!(
             boxes_right,
             HashSet::from([
-                &WideBox::new((4, 3).into(), (5, 3).into()),
-                &WideBox::new((6, 3).into(), (7, 3).into())
+                1,
+                2 /* &WideBox::new((4, 3).into(), (5, 3).into()),
+                  &WideBox::new((6, 3).into(), (7, 3).into()) */
             ])
         );
 
@@ -738,9 +669,10 @@ mod test {
         assert_eq!(
             boxes_below,
             HashSet::from([
-                &WideBox::new((5, 2).into(), (6, 2).into()),
-                &WideBox::new((4, 3).into(), (5, 3).into()),
-                &WideBox::new((6, 3).into(), (7, 3).into())
+                0, 1,
+                2 /* &WideBox::new((5, 2).into(), (6, 2).into()),
+                  &WideBox::new((4, 3).into(), (5, 3).into()),
+                  &WideBox::new((6, 3).into(), (7, 3).into()) */
             ])
         );
     }
