@@ -1,5 +1,5 @@
 <!-- AOC TILES BEGIN -->
-<h1 align="center">
+<h1 align="center"> 
   2024 - 29 ⭐ - Rust
 </h1>
 <a href="2024/src/days/day01.rs">
